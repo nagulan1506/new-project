@@ -17,6 +17,18 @@ app.get('/', (req, res) => {
     res.send('Password Reset API is running and healthy!');
 });
 
+// Debug endpoint to check environment variables on Render
+app.get('/api/debug/env', (req, res) => {
+    res.json({
+        EMAIL_USER_SET: !!process.env.EMAIL_USER,
+        EMAIL_PASS_SET: !!process.env.EMAIL_PASS,
+        EMAIL_PASS_LENGTH: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.length : 0,
+        MONGODB_URI_SET: !!process.env.MONGODB_URI,
+        CLIENT_URL: process.env.CLIENT_URL || 'Not Set',
+        NODE_ENV: process.env.NODE_ENV
+    });
+});
+
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('Connected to MongoDB'))
     .catch(err => console.error('MongoDB connection error:', err));
