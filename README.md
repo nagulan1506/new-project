@@ -45,9 +45,10 @@ A full-stack application built with Node.js, Express, MongoDB, and React (Vite) 
   - `CLIENT_URL`: The URL of your deployed Netlify app.
 
 ### 2. Netlify (Frontend Deployment)
-- **Create a Site**: Connect your GitHub repository.
-- **Base Directory**: `client`
-- **Build Command**: `npm run build`
-- **Publish Directory**: `dist`
+- **Automatic Configuration**: I have added a `netlify.toml` file to the root. Netlify should automatically detect the `client` directory and build it.
+- **Manual Settings (if needed)**:
+  - **Base Directory**: `client`
+  - **Build Command**: `npm run build`
+  - **Publish Directory**: `dist`
 - **Environment Variables**:
   - `VITE_API_URL`: The URL of your deployed Render backend (e.g., `https://password-reset.onrender.com`).
