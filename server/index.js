@@ -100,7 +100,9 @@ app.post('/api/auth/forgot-password', async (req, res) => {
             },
             tls: {
                 rejectUnauthorized: false
-            }
+            },
+            connectionTimeout: 5000, // 5 seconds
+            greetingTimeout: 5000   // 5 seconds
         });
 
         const mailOptions = {
