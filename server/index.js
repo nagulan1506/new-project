@@ -45,18 +45,34 @@ app.post('/api/auth/forgot-password', async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
+        console.log(`Forgot password request for: ${normalizedEmail}`);
+        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+            console.error('Email credentials missing in environment variables');
+            return res.status(500).json({ message: 'Server email configuration missing' });
+        }
+
         const token = crypto.randomBytes(32).toString('hex');
         user.resetToken = token;
         user.resetTokenExpiry = Date.now() + 3600000; // 1 hour
         await user.save();
 
         const transporter = nodemailer.createTransport({
-            service: 'gmail',
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true, // Use SSL
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS
             }
         });
+
+        // Verify connection configuration
+        try {
+            await transporter.verify();
+            console.log('Nodemailer verified and ready');
+        } catch (verifyErr) {
+            console.error('Nodemailer verify error:', verifyErr);
+        }
 
         const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
         const resetLink = `${clientUrl}/reset-password/${token}`;
@@ -70,11 +86,12 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
         try {
             await transporter.sendMail(mailOptions);
+            console.log('Reset email sent successfully to:', email);
             res.status(200).json({ message: 'Reset link sent to email' });
         } catch (error) {
-            console.error('Nodemailer error:', error);
+            console.error('Nodemailer sendMail error:', error);
             res.status(500).json({
-                message: 'Failed to send email. Ensure EMAIL_USER and EMAIL_PASS are correct in .env.',
+                message: 'Failed to send email. If this is on Render, check the Environment tab in your dashboard.',
                 error: error.message
             });
         }
