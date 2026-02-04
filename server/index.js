@@ -58,7 +58,8 @@ app.post('/api/auth/forgot-password', async (req, res) => {
             }
         });
 
-        const resetLink = `${process.env.CLIENT_URL}/reset-password/${token}`;
+        const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+        const resetLink = `${clientUrl}/reset-password/${token}`;
 
         const mailOptions = {
             from: process.env.EMAIL_USER,
