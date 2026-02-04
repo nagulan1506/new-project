@@ -52,3 +52,14 @@ A full-stack application built with Node.js, Express, MongoDB, and React (Vite) 
   - **Publish Directory**: `dist`
 - **Environment Variables**:
   - `VITE_API_URL`: The URL of your deployed Render backend (e.g., `https://password-reset.onrender.com`).
+
+## 🚨 Critical: Fix for Email Timeout (Render Free Tier)
+If you get a **"Timeout of 15000ms exceeded"** error on Render, it is because Render blocks standard Gmail ports.
+
+**The Solution: Use Resend** (1-minute setup):
+1. Create a free account at **[Resend.com](https://resend.com)**.
+2. Go to **API Keys** and create one (e.g., `re_123abc`).
+3. Add it to your **Render Dashboard** as an Environment Variable: 
+   - **Key**: `RESEND_API_KEY`
+   - **Value**: (your `re_...` key)
+4. Render will restart and automatically bypass the timeout by using the Resend API!
