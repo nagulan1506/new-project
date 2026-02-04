@@ -18,6 +18,17 @@ app.get('/', (req, res) => {
     res.send('Password Reset API is running and healthy!');
 });
 
+// Debug endpoint (Required for final verification)
+app.get('/api/debug/env', (req, res) => {
+    res.json({
+        EMAIL_USER_SET: !!process.env.EMAIL_USER,
+        EMAIL_PASS_SET: !!process.env.EMAIL_PASS,
+        RESEND_API_KEY_SET: !!process.env.RESEND_API_KEY,
+        MONGODB_URI_SET: !!process.env.MONGODB_URI,
+        CLIENT_URL: process.env.CLIENT_URL || 'Not Set'
+    });
+});
+
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('Connected to MongoDB'))
     .catch(err => console.error('MongoDB connection error:', err));
