@@ -6,6 +6,7 @@ const ForgotPassword = () => {
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [serverStatus, setServerStatus] = useState(null);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -28,10 +29,27 @@ const ForgotPassword = () => {
         }
     };
 
+    const checkServer = async () => {
+        setServerStatus('Checking...');
+        try {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const response = await axios.get(`${apiUrl}/`);
+            setServerStatus(`Success: ${response.data}`);
+        } catch (err) {
+            setServerStatus(`Failed: ${err.message}`);
+        }
+    };
+
     return (
-        <div className="row justify-content-center">
-            <div className="col-md-6 border p-4 shadow-sm rounded bg-white">
+        <div className="row justify-content-center mt-5">
+            <div className="col-md-6 border p-4 shadow-sm rounded bg-light" style={{ borderTop: '5px solid #0d6efd' }}>
                 <h3 className="text-center mb-4">Forgot Password</h3>
+                <div className="text-center mb-3">
+                    <button type="button" onClick={checkServer} className="btn btn-sm btn-outline-info">
+                        Test Server Connection
+                    </button>
+                    {serverStatus && <div className="small mt-1 text-muted">{serverStatus}</div>}
+                </div>
                 <form onSubmit={handleSubmit}>
                     <div className="mb-3">
                         <label className="form-label">Email Address</label>
