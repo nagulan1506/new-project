@@ -5,16 +5,20 @@ const ForgotPassword = () => {
     const [email, setEmail] = useState('');
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setMessage('');
         setError('');
+        setLoading(true);
         try {
             const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/forgot-password`, { email });
             setMessage(response.data.message);
         } catch (err) {
             setError(err.response?.data?.message || 'Something went wrong');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -34,7 +38,9 @@ const ForgotPassword = () => {
                             placeholder="Enter your email"
                         />
                     </div>
-                    <button type="submit" className="btn btn-primary w-100">Send Reset Link</button>
+                    <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+                        {loading ? 'Sending...' : 'Send Reset Link'}
+                    </button>
                 </form>
                 {message && <div className="alert alert-success mt-3">{message}</div>}
                 {error && <div className="alert alert-danger mt-3">{error}</div>}
