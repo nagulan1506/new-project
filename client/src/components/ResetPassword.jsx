@@ -7,18 +7,22 @@ const ResetPassword = () => {
     const [newPassword, setNewPassword] = useState('');
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setMessage('');
         setError('');
+        setLoading(true);
         try {
             const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/reset-password`, { token, newPassword });
             setMessage(response.data.message);
             setTimeout(() => navigate('/'), 3000);
         } catch (err) {
             setError(err.response?.data?.message || 'Something went wrong');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -38,7 +42,9 @@ const ResetPassword = () => {
                             placeholder="Enter new password"
                         />
                     </div>
-                    <button type="submit" className="btn btn-success w-100">Reset Password</button>
+                    <button type="submit" className="btn btn-success w-100" disabled={loading}>
+                        {loading ? 'Resetting...' : 'Reset Password'}
+                    </button>
                 </form>
                 {message && <div className="alert alert-success mt-3">{message}</div>}
                 {error && <div className="alert alert-danger mt-3">{error}</div>}
