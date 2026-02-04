@@ -24,7 +24,9 @@ const ResetPassword = () => {
             setMessage(response.data.message);
             setTimeout(() => navigate('/'), 3000);
         } catch (err) {
-            setError(err.response?.data?.message || 'Something went wrong');
+            const errorMsg = err.response?.data?.message || err.message || 'Something went wrong';
+            setError(errorMsg);
+            console.error('Detailed Error:', err);
         } finally {
             setLoading(false);
         }
