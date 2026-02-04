@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const User = require('./models/User');
 
 dotenv.config();
@@ -68,6 +69,28 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         user.resetTokenExpiry = Date.now() + 3600000; // 1 hour
         await user.save();
 
+        const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+        const resetLink = `${clientUrl}/reset-password/${token}`;
+
+        // 1. Try using Resend if API Key is provided (Highly recommended for Render)
+        if (process.env.RESEND_API_KEY) {
+            try {
+                const resend = new Resend(process.env.RESEND_API_KEY);
+                await resend.emails.send({
+                    from: 'onboarding@resend.dev', // Default test sender
+                    to: email,
+                    subject: 'Password Reset',
+                    html: `<p>You requested a password reset. Click the link to reset your password:</p><a href="${resetLink}">${resetLink}</a>`
+                });
+                console.log('Reset email sent via Resend to:', email);
+                return res.status(200).json({ message: 'Reset link sent to email via Resend' });
+            } catch (resendError) {
+                console.error('Resend error:', resendError);
+                // Fall through to Nodemailer...
+            }
+        }
+
+        // 2. Fallback to Nodemailer (SMTP)
         const transporter = nodemailer.createTransport({
             host: 'smtp.gmail.com',
             port: 587,
@@ -77,14 +100,9 @@ app.post('/api/auth/forgot-password', async (req, res) => {
                 pass: process.env.EMAIL_PASS
             },
             tls: {
-                rejectUnauthorized: false // Helps with some cloud network restrictions
-            },
-            logger: true,
-            debug: true
+                rejectUnauthorized: false
+            }
         });
-
-        const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-        const resetLink = `${clientUrl}/reset-password/${token}`;
 
         const mailOptions = {
             from: process.env.EMAIL_USER,
@@ -95,12 +113,12 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
         try {
             await transporter.sendMail(mailOptions);
-            console.log('Reset email sent successfully to:', email);
+            console.log('Reset email sent via Nodemailer to:', email);
             res.status(200).json({ message: 'Reset link sent to email' });
         } catch (error) {
             console.error('Nodemailer sendMail error:', error);
             res.status(500).json({
-                message: 'Failed to send email. If this is on Render, check the Environment tab in your dashboard.',
+                message: 'Failed to send email. Check your Render logs and Environment variables.',
                 error: error.message
             });
         }
