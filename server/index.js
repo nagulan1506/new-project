@@ -66,14 +66,6 @@ app.post('/api/auth/forgot-password', async (req, res) => {
             }
         });
 
-        // Verify connection configuration
-        try {
-            await transporter.verify();
-            console.log('Nodemailer verified and ready');
-        } catch (verifyErr) {
-            console.error('Nodemailer verify error:', verifyErr);
-        }
-
         const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
         const resetLink = `${clientUrl}/reset-password/${token}`;
 
