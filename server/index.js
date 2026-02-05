@@ -5,7 +5,8 @@ const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
 const User = require('./models/User');
 
-dotenv.config();
+const path = require('path');
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 app.use(cors());
