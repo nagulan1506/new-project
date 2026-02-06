@@ -8,8 +8,8 @@ const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
 const User = require('./models/User');
 
-const path = require('path');
-dotenv.config({ path: path.join(__dirname, '.env') });
+// Load environment variables from .env file in development, or from Render's environment in production
+dotenv.config();
 
 const app = express();
 
