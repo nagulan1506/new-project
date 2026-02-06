@@ -40,6 +40,11 @@ app.get('/api/debug/env', (req, res) => {
 
 // Improved MongoDB Connection
 const connectDB = async () => {
+    if (!process.env.MONGODB_URI) {
+        console.error('FATAL ERROR: MONGODB_URI is undefined. Please set this environment variable in your Render Dashboard.');
+        // We cannot proceed without a database, but we won't crash the process so the debug endpoint still works
+        return;
+    }
     try {
         await mongoose.connect(process.env.MONGODB_URI, {
             serverSelectionTimeoutMS: 5000 // Timeout after 5s instead of 30s
