@@ -12,7 +12,15 @@ const path = require('path');
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
-app.use(cors());
+
+// CORS Configuration
+app.use(cors({
+    origin: ['http://localhost:5173', 'https://jovial-torte-834bf7.netlify.app', process.env.CLIENT_URL],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 app.get('/', (req, res) => {
@@ -30,9 +38,19 @@ app.get('/api/debug/env', (req, res) => {
     });
 });
 
-mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log('Connected to MongoDB'))
-    .catch(err => console.error('MongoDB connection error:', err));
+// Improved MongoDB Connection
+const connectDB = async () => {
+    try {
+        await mongoose.connect(process.env.MONGODB_URI, {
+            serverSelectionTimeoutMS: 5000 // Timeout after 5s instead of 30s
+        });
+        console.log('Connected to MongoDB');
+    } catch (err) {
+        console.error('MongoDB connection error:', err);
+        // Do not exit process, allowing the server to stay up (though endpoints will fail)
+    }
+};
+connectDB();
 
 // Register
 app.post('/api/auth/register', async (req, res) => {
