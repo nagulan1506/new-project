@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
+import API_URL from '../config';
 
 function Login() {
     const [email, setEmail] = useState('');
@@ -14,7 +15,7 @@ function Login() {
         setMessage('');
         setError('');
         try {
-            const response = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+            const response = await axios.post(`${API_URL}/api/auth/login`, { email, password });
             setMessage(response.data.message);
             // In a real app, store token in localStorage
             // localStorage.setItem('token', response.data.token);
