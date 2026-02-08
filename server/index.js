@@ -122,47 +122,66 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
         const resetLink = `${clientUrl}/reset-password/${token}`;
 
+        let emailSent = false;
+
         // 1. Try using Resend if API Key is provided
         if (process.env.RESEND_API_KEY) {
             try {
                 const resend = new Resend(process.env.RESEND_API_KEY);
-                await resend.emails.send({
+                const { data, error } = await resend.emails.send({
                     from: 'onboarding@resend.dev',
                     to: email,
                     subject: 'Password Reset',
                     html: `<p>You requested a password reset. Click the link to reset your password:</p><a href="${resetLink}">${resetLink}</a>`
                 });
-                return res.status(200).json({ message: 'Reset link sent to email via Resend' });
+
+                if (error) {
+                    console.error('Resend API Error:', error);
+                    // If error is about restricted domain, we should definitely fallback
+                } else {
+                    console.log('Email sent via Resend:', data);
+                    emailSent = true;
+                }
             } catch (resendError) {
-                console.error('Resend error:', resendError);
+                console.error('Resend execution error:', resendError);
             }
         }
 
-        // 2. Fallback to Nodemailer
-        const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 587,
-            secure: false,
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-            },
-            tls: {
-                rejectUnauthorized: false
+        // 2. Fallback to Nodemailer if Resend failed or wasn't tried
+        if (!emailSent) {
+            console.log('Attempting to send via Nodemailer...');
+            try {
+                const transporter = nodemailer.createTransport({
+                    service: 'gmail',
+                    auth: {
+                        user: process.env.EMAIL_USER,
+                        pass: process.env.EMAIL_PASS
+                    }
+                });
+
+                const mailOptions = {
+                    from: process.env.EMAIL_USER,
+                    to: email,
+                    subject: 'Password Reset',
+                    text: `You requested a password reset. Click the link to reset your password: ${resetLink}`,
+                    html: `<p>You requested a password reset. Click the link to reset your password:</p><a href="${resetLink}">${resetLink}</a>`
+                };
+
+                const info = await transporter.sendMail(mailOptions);
+                console.log('Email sent via Nodemailer:', info.messageId);
+                emailSent = true;
+            } catch (nodemailerError) {
+                console.error('Nodemailer error:', nodemailerError);
+                return res.status(500).json({ message: 'Failed to send email. Please check server logs.', error: nodemailerError.message });
             }
-        });
+        }
 
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'Password Reset',
-            text: `You requested a password reset. Click the link to reset your password: ${resetLink}`
-        };
-
-        await transporter.sendMail(mailOptions);
-        res.status(200).json({ message: 'Reset link sent to email' });
+        if (emailSent) {
+            res.status(200).json({ message: 'Reset link sent to email' });
+        }
 
     } catch (err) {
+        console.error('Forgot Password Setup Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
