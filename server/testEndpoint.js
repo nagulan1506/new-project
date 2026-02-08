@@ -3,7 +3,7 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const API_URL = 'http://localhost:5000';
+const API_URL = 'http://localhost:5001';
 const TEST_EMAIL = process.env.EMAIL_USER; // Send to self
 
 async function testForgotPassword() {

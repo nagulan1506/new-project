@@ -190,12 +190,15 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 app.post('/api/auth/reset-password', async (req, res) => {
     try {
         const { token, newPassword } = req.body;
+        console.log('Received Reset Request for Token:', token);
+
         const user = await User.findOne({
             resetToken: token,
             resetTokenExpiry: { $gt: Date.now() }
         });
 
         if (!user) {
+            console.log('Invalid or expired token for:', token);
             return res.status(400).json({ message: 'Invalid or expired token' });
         }
 
@@ -204,8 +207,10 @@ app.post('/api/auth/reset-password', async (req, res) => {
         user.resetTokenExpiry = undefined;
         await user.save();
 
+        console.log('Password reset successful for user:', user.email);
         res.status(200).json({ message: 'Password reset successful' });
     } catch (err) {
+        console.error('Reset Password Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
