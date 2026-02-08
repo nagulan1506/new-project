@@ -121,10 +121,13 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
         const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
         const resetLink = `${clientUrl}/reset-password/${token}`;
+        console.log('Token generated. Link:', resetLink);
 
         let emailSent = false;
 
+        /* 
         // 1. Try using Resend if API Key is provided
+        // DISABLED because free tier only allows sending to verified email
         if (process.env.RESEND_API_KEY) {
             try {
                 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -134,10 +137,9 @@ app.post('/api/auth/forgot-password', async (req, res) => {
                     subject: 'Password Reset',
                     html: `<p>You requested a password reset. Click the link to reset your password:</p><a href="${resetLink}">${resetLink}</a>`
                 });
-
+                
                 if (error) {
                     console.error('Resend API Error:', error);
-                    // If error is about restricted domain, we should definitely fallback
                 } else {
                     console.log('Email sent via Resend:', data);
                     emailSent = true;
@@ -146,34 +148,34 @@ app.post('/api/auth/forgot-password', async (req, res) => {
                 console.error('Resend execution error:', resendError);
             }
         }
+        */
 
-        // 2. Fallback to Nodemailer if Resend failed or wasn't tried
-        if (!emailSent) {
-            console.log('Attempting to send via Nodemailer...');
-            try {
-                const transporter = nodemailer.createTransport({
-                    service: 'gmail',
-                    auth: {
-                        user: process.env.EMAIL_USER,
-                        pass: process.env.EMAIL_PASS
-                    }
-                });
+        // 2. Use Nodemailer as the PRIMARY service to ensure emails are sent to ALL users
+        console.log('Attempting to send via Nodemailer (Primary)...');
+        try {
+            const transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASS
+                }
+            });
 
-                const mailOptions = {
-                    from: process.env.EMAIL_USER,
-                    to: email,
-                    subject: 'Password Reset',
-                    text: `You requested a password reset. Click the link to reset your password: ${resetLink}`,
-                    html: `<p>You requested a password reset. Click the link to reset your password:</p><a href="${resetLink}">${resetLink}</a>`
-                };
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: email,
+                subject: 'Password Reset',
+                text: `You requested a password reset. Click the link to reset your password: ${resetLink}`,
+                html: `<p>You requested a password reset. Click the link to reset your password:</p><a href="${resetLink}">${resetLink}</a>`
+            };
 
-                const info = await transporter.sendMail(mailOptions);
-                console.log('Email sent via Nodemailer:', info.messageId);
-                emailSent = true;
-            } catch (nodemailerError) {
-                console.error('Nodemailer error:', nodemailerError);
-                return res.status(500).json({ message: 'Failed to send email. Please check server logs.', error: nodemailerError.message });
-            }
+            const info = await transporter.sendMail(mailOptions);
+            console.log('Email sent via Nodemailer:', info.messageId);
+            emailSent = true;
+
+        } catch (nodemailerError) {
+            console.error('Nodemailer error:', nodemailerError);
+            return res.status(500).json({ message: 'Failed to send email. Please check server logs.', error: nodemailerError.message });
         }
 
         if (emailSent) {
