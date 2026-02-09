@@ -7,16 +7,21 @@ function ForgotPassword() {
     const [email, setEmail] = useState('');
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setMessage('');
         setError('');
+        setLoading(true);
         try {
             const response = await axios.post(`${API_URL}/api/auth/forgot-password`, { email });
             setMessage(response.data.message);
         } catch (err) {
-            setError(err.response?.data?.message || 'Something went wrong');
+            setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+            console.error(err);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -37,7 +42,9 @@ function ForgotPassword() {
                                     required
                                 />
                             </div>
-                            <button type="submit" className="btn btn-primary w-100">Send Reset Link</button>
+                            <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+                                {loading ? 'Sending...' : 'Send Reset Link'}
+                            </button>
                         </form>
                         {message && <div className="alert alert-success mt-3">{message}</div>}
                         {error && <div className="alert alert-danger mt-3">{error}</div>}

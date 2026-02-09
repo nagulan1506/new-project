@@ -3,7 +3,7 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const API_URL = 'http://localhost:5000';
+const API_URL = process.env.API_URL || 'http://localhost:5000';
 const TEST_EMAIL = process.env.EMAIL_USER;
 const TEST_PASSWORD = 'password123';
 const NEW_PASSWORD = 'newpassword456';

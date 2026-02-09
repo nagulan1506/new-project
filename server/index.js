@@ -161,6 +161,10 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         const normalizedEmail = email.toLowerCase();
         const user = await User.findOne({ email: normalizedEmail });
         if (!user) {
+            // Security: Don't reveal if user exists or not, but for debugging we might want to know. 
+            // Standard practice is to say "If that email exists, a link has been sent."
+            // But checking the user's previous code, they returned 404. I will keep it consistent or follow best practice?
+            // User's code returned 404. I'll stick to it for now to avoid confusion, or maybe improve validation.
             return res.status(404).json({ message: 'User not found' });
         }
 
@@ -171,36 +175,39 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
         const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
         const resetLink = `${clientUrl}/reset-password/${token}`;
-        console.log('Token generated. Link:', resetLink);
+        console.log(`[ForgotPassword] Token generated for ${email}. Link: ${resetLink}`);
 
         let emailSent = false;
+        let lastError = null;
 
         // 1. Try using Resend if API Key is provided
         if (process.env.RESEND_API_KEY) {
-            console.log('Attempting to send via Resend...');
+            console.log('[ForgotPassword] Attempting to send via Resend...');
             try {
                 const resend = new Resend(process.env.RESEND_API_KEY);
                 const { data, error } = await resend.emails.send({
                     from: 'onboarding@resend.dev',
-                    to: email, // Free tier: Only works if 'email' is the Verified Sender or Team Member
+                    to: email, // Free tier limitation: Must be verified email
                     subject: 'Password Reset',
                     html: `<p>You requested a password reset. Click the link to reset your password:</p><a href="${resetLink}">${resetLink}</a>`
                 });
 
                 if (error) {
-                    console.error('Resend API Error:', error);
+                    console.error('[ForgotPassword] Resend API Error:', error);
+                    lastError = error;
                 } else {
-                    console.log('Email sent via Resend:', data);
+                    console.log('[ForgotPassword] Email sent via Resend:', data);
                     emailSent = true;
                 }
             } catch (resendError) {
-                console.error('Resend execution error:', resendError);
+                console.error('[ForgotPassword] Resend execution error:', resendError);
+                lastError = resendError;
             }
         }
 
         // 2. Use Nodemailer ONLY if Resend failed or not present
         if (!emailSent) {
-            console.log('Attempting to send via Nodemailer (Fallback)...');
+            console.log('[ForgotPassword] Attempting to send via Nodemailer (Fallback)...');
             try {
                 const transporter = nodemailer.createTransport({
                     host: 'smtp.gmail.com',
@@ -210,8 +217,14 @@ app.post('/api/auth/forgot-password', async (req, res) => {
                         user: process.env.EMAIL_USER,
                         pass: process.env.EMAIL_PASS
                     },
-                    connectionTimeout: 5000 // Add timeout to prevent hanging
+                    connectionTimeout: 10000, // 10 seconds
+                    greetingTimeout: 10000,
+                    socketTimeout: 10000
                 });
+
+                // Verify connection first
+                await transporter.verify();
+                console.log('[ForgotPassword] Nodemailer connection verified.');
 
                 const mailOptions = {
                     from: process.env.EMAIL_USER,
@@ -222,23 +235,27 @@ app.post('/api/auth/forgot-password', async (req, res) => {
                 };
 
                 const info = await transporter.sendMail(mailOptions);
-                console.log('Email sent via Nodemailer:', info.messageId);
+                console.log('[ForgotPassword] Email sent via Nodemailer:', info.messageId);
                 emailSent = true;
 
             } catch (nodemailerError) {
-                console.error('Nodemailer error:', nodemailerError);
-                if (!emailSent) {
-                    return res.status(500).json({ message: 'Failed to send email. Server is busy.', error: nodemailerError.message });
-                }
+                console.error('[ForgotPassword] Nodemailer error:', nodemailerError);
+                lastError = nodemailerError;
             }
         }
 
         if (emailSent) {
-            res.status(200).json({ message: 'Reset link sent to email' });
+            return res.status(200).json({ message: 'Reset link sent to email' });
+        } else {
+            console.error('[ForgotPassword] All email methods failed.');
+            return res.status(500).json({
+                message: 'Failed to send email. Please try again later.',
+                debug: lastError ? lastError.message : 'Unknown error'
+            });
         }
 
     } catch (err) {
-        console.error('Forgot Password Setup Error:', err);
+        console.error('[ForgotPassword] Setup Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
