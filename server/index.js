@@ -174,19 +174,18 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
         let emailSent = false;
 
-        /* 
         // 1. Try using Resend if API Key is provided
-        // DISABLED because free tier only allows sending to verified email
         if (process.env.RESEND_API_KEY) {
+            console.log('Attempting to send via Resend...');
             try {
                 const resend = new Resend(process.env.RESEND_API_KEY);
                 const { data, error } = await resend.emails.send({
                     from: 'onboarding@resend.dev',
-                    to: email,
+                    to: email, // Free tier: Only works if 'email' is the Verified Sender or Team Member
                     subject: 'Password Reset',
                     html: `<p>You requested a password reset. Click the link to reset your password:</p><a href="${resetLink}">${resetLink}</a>`
                 });
-                
+
                 if (error) {
                     console.error('Resend API Error:', error);
                 } else {
@@ -197,36 +196,40 @@ app.post('/api/auth/forgot-password', async (req, res) => {
                 console.error('Resend execution error:', resendError);
             }
         }
-        */
 
-        // 2. Use Nodemailer as the PRIMARY service to ensure emails are sent to ALL users
-        console.log('Attempting to send via Nodemailer (Primary)...');
-        try {
-            const transporter = nodemailer.createTransport({
-                host: 'smtp.gmail.com',
-                port: 465,
-                secure: true,
-                auth: {
-                    user: process.env.EMAIL_USER,
-                    pass: process.env.EMAIL_PASS
+        // 2. Use Nodemailer ONLY if Resend failed or not present
+        if (!emailSent) {
+            console.log('Attempting to send via Nodemailer (Fallback)...');
+            try {
+                const transporter = nodemailer.createTransport({
+                    host: 'smtp.gmail.com',
+                    port: 465,
+                    secure: true,
+                    auth: {
+                        user: process.env.EMAIL_USER,
+                        pass: process.env.EMAIL_PASS
+                    },
+                    connectionTimeout: 5000 // Add timeout to prevent hanging
+                });
+
+                const mailOptions = {
+                    from: process.env.EMAIL_USER,
+                    to: email,
+                    subject: 'Password Reset',
+                    text: `You requested a password reset. Click the link to reset your password: ${resetLink}`,
+                    html: `<p>You requested a password reset. Click the link to reset your password:</p><a href="${resetLink}">${resetLink}</a>`
+                };
+
+                const info = await transporter.sendMail(mailOptions);
+                console.log('Email sent via Nodemailer:', info.messageId);
+                emailSent = true;
+
+            } catch (nodemailerError) {
+                console.error('Nodemailer error:', nodemailerError);
+                if (!emailSent) {
+                    return res.status(500).json({ message: 'Failed to send email. Server is busy.', error: nodemailerError.message });
                 }
-            });
-
-            const mailOptions = {
-                from: process.env.EMAIL_USER,
-                to: email,
-                subject: 'Password Reset',
-                text: `You requested a password reset. Click the link to reset your password: ${resetLink}`,
-                html: `<p>You requested a password reset. Click the link to reset your password:</p><a href="${resetLink}">${resetLink}</a>`
-            };
-
-            const info = await transporter.sendMail(mailOptions);
-            console.log('Email sent via Nodemailer:', info.messageId);
-            emailSent = true;
-
-        } catch (nodemailerError) {
-            console.error('Nodemailer error:', nodemailerError);
-            return res.status(500).json({ message: 'Failed to send email. Please check server logs.', error: nodemailerError.message });
+            }
         }
 
         if (emailSent) {
