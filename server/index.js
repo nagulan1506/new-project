@@ -154,6 +154,7 @@ app.post('/api/auth/login', async (req, res) => {
 // Forgot Password
 app.post('/api/auth/forgot-password', async (req, res) => {
     try {
+        const { email } = req.body;
         if (!email || typeof email !== 'string') {
             return res.status(400).json({ message: 'Invalid email format' });
         }
