@@ -38,6 +38,51 @@ app.get('/api/debug/env', (req, res) => {
     });
 });
 
+app.get('/api/debug/test-db', async (req, res) => {
+    try {
+        const state = mongoose.connection.readyState;
+        const states = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
+
+        // Try a simple query
+        const count = await User.countDocuments();
+
+        res.json({
+            state: states[state] || state,
+            userCount: count,
+            message: 'Database connection is working'
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'DB Test Failed', details: err.message });
+    }
+});
+
+app.get('/api/debug/test-email', async (req, res) => {
+    const testEmail = req.query.to || process.env.EMAIL_USER;
+    if (!testEmail) return res.status(400).json({ error: 'No test email provided' });
+
+    try {
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+
+        await transporter.verify();
+        const info = await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: testEmail,
+            subject: 'Debug Email Test',
+            text: 'If you received this, email sending is working on Render.'
+        });
+
+        res.json({ message: 'Email sent successfully', messageId: info.messageId });
+    } catch (err) {
+        res.status(500).json({ error: 'Email Test Failed', details: err.message });
+    }
+});
+
 // Improved MongoDB Connection
 const connectDB = async () => {
     if (!process.env.MONGODB_URI) {
@@ -107,7 +152,9 @@ app.post('/api/auth/login', async (req, res) => {
 // Forgot Password
 app.post('/api/auth/forgot-password', async (req, res) => {
     try {
-        const { email } = req.body;
+        if (!email || typeof email !== 'string') {
+            return res.status(400).json({ message: 'Invalid email format' });
+        }
         const normalizedEmail = email.toLowerCase();
         const user = await User.findOne({ email: normalizedEmail });
         if (!user) {

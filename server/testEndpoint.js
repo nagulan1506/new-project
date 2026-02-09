@@ -3,8 +3,8 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const API_URL = 'http://localhost:5001';
-const TEST_EMAIL = process.env.EMAIL_USER; // Send to self
+const API_URL = 'https://password-reset-backend-788i.onrender.com';
+const TEST_EMAIL = 'nagulans6524@gmail.com'; // Hardcoded for testing
 
 async function testForgotPassword() {
     console.log(`Testing Forgot Password Endpoint: ${API_URL}/api/auth/forgot-password`);
