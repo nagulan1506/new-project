@@ -2,6 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import API_URL from '../config';
+import { FaEnvelope, FaLock } from 'react-icons/fa';
 
 function Register() {
     const [email, setEmail] = useState('');
@@ -32,23 +33,31 @@ function Register() {
                         <form onSubmit={handleSubmit}>
                             <div className="mb-3">
                                 <label className="form-label">Email address</label>
-                                <input
-                                    type="email"
-                                    className="form-control"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
+                                <div className="input-group">
+                                    <span className="input-group-text"><FaEnvelope /></span>
+                                    <input
+                                        type="email"
+                                        className="form-control"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                        placeholder="Enter your email"
+                                    />
+                                </div>
                             </div>
                             <div className="mb-3">
                                 <label className="form-label">Password</label>
-                                <input
-                                    type="password"
-                                    className="form-control"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                />
+                                <div className="input-group">
+                                    <span className="input-group-text"><FaLock /></span>
+                                    <input
+                                        type="password"
+                                        className="form-control"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                        placeholder="Create a password"
+                                    />
+                                </div>
                             </div>
                             <button type="submit" className="btn btn-primary w-100">Register</button>
                         </form>
