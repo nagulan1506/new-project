@@ -207,23 +207,18 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
         // 2. Use Nodemailer ONLY if Resend failed or not present
         if (!emailSent) {
-            console.log('[ForgotPassword] Attempting to send via Nodemailer (Fallback)...');
+            console.log('[ForgotPassword] Attempting to send via Nodemailer to:', email);
             try {
                 const transporter = nodemailer.createTransport({
-                    host: 'smtp.gmail.com',
-                    port: 465,
-                    secure: true,
+                    service: 'gmail', // Use service shorthand for better compatibility
                     auth: {
                         user: process.env.EMAIL_USER,
                         pass: process.env.EMAIL_PASS
-                    },
-                    connectionTimeout: 10000, // 10 seconds
-                    greetingTimeout: 10000,
-                    socketTimeout: 10000,
-                    family: 4 // Force IPv4 to avoid ENETUNREACH on some environments (like Render)
+                    }
                 });
 
                 // Verify connection first
+                console.log('[ForgotPassword] Verifying Nodemailer transporter...');
                 await transporter.verify();
                 console.log('[ForgotPassword] Nodemailer connection verified.');
 
@@ -235,23 +230,26 @@ app.post('/api/auth/forgot-password', async (req, res) => {
                     html: `<p>You requested a password reset. Click the link to reset your password:</p><a href="${resetLink}">${resetLink}</a>`
                 };
 
+                console.log('[ForgotPassword] Sending mail...');
                 const info = await transporter.sendMail(mailOptions);
                 console.log('[ForgotPassword] Email sent via Nodemailer:', info.messageId);
                 emailSent = true;
 
             } catch (nodemailerError) {
-                console.error('[ForgotPassword] Nodemailer error:', nodemailerError);
+                console.error('[ForgotPassword] Nodemailer error details:', nodemailerError);
                 lastError = nodemailerError;
             }
         }
 
         if (emailSent) {
+            console.log('[ForgotPassword] Success!');
             return res.status(200).json({ message: 'Reset link sent to email' });
         } else {
-            console.error('[ForgotPassword] All email methods failed.');
+            console.error('[ForgotPassword] FAILED. Last error:', lastError);
             return res.status(500).json({
                 message: 'Failed to send email. Please try again later.',
-                debug: lastError ? lastError.message : 'Unknown error'
+                debug: lastError ? lastError.message : 'Unknown error',
+                details: lastError ? JSON.stringify(lastError, Object.getOwnPropertyNames(lastError)) : 'No details'
             });
         }
 
