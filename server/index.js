@@ -161,10 +161,6 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         const normalizedEmail = email.toLowerCase();
         const user = await User.findOne({ email: normalizedEmail });
         if (!user) {
-            // Security: Don't reveal if user exists or not, but for debugging we might want to know. 
-            // Standard practice is to say "If that email exists, a link has been sent."
-            // But checking the user's previous code, they returned 404. I will keep it consistent or follow best practice?
-            // User's code returned 404. I'll stick to it for now to avoid confusion, or maybe improve validation.
             return res.status(404).json({ message: 'User not found' });
         }
 
@@ -175,7 +171,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
         const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
         const resetLink = `${clientUrl}/reset-password/${token}`;
-        console.log(`[ForgotPassword] Token generated for ${email}. Link: ${resetLink}`);
+        console.log(`[ForgotPassword] Token generated. Link: ${resetLink}`);
 
         let emailSent = false;
         let lastError = null;
@@ -210,10 +206,15 @@ app.post('/api/auth/forgot-password', async (req, res) => {
             console.log('[ForgotPassword] Attempting to send via Nodemailer to:', email);
             try {
                 const transporter = nodemailer.createTransport({
-                    service: 'gmail', // Use service shorthand for better compatibility
+                    host: 'smtp.gmail.com',
+                    port: 587,
+                    secure: false, // true for 465, false for other ports
                     auth: {
                         user: process.env.EMAIL_USER,
                         pass: process.env.EMAIL_PASS
+                    },
+                    tls: {
+                        rejectUnauthorized: false // Helps with some self-signed cert issues on cloud
                     }
                 });
 
@@ -223,7 +224,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
                 console.log('[ForgotPassword] Nodemailer connection verified.');
 
                 const mailOptions = {
-                    from: process.env.EMAIL_USER,
+                    from: process.env.EMAIL_USER, // SENDER ADDRESS
                     to: email,
                     subject: 'Password Reset',
                     text: `You requested a password reset. Click the link to reset your password: ${resetLink}`,
@@ -232,7 +233,8 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
                 console.log('[ForgotPassword] Sending mail...');
                 const info = await transporter.sendMail(mailOptions);
-                console.log('[ForgotPassword] Email sent via Nodemailer:', info.messageId);
+                console.log('[ForgotPassword] Email sent via Nodemailer. MessageId:', info.messageId);
+                console.log('[ForgotPassword] Preview URL:', nodemailer.getTestMessageUrl(info));
                 emailSent = true;
 
             } catch (nodemailerError) {
