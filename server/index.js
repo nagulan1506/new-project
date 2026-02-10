@@ -261,6 +261,25 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     }
 });
 
+// Verify Token Endpoint
+app.get('/api/auth/verify-token/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const user = await User.findOne({
+            resetToken: token,
+            resetTokenExpiry: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid or expired token' });
+        }
+
+        res.status(200).json({ message: 'Token is valid' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Reset Password
 app.post('/api/auth/reset-password', async (req, res) => {
     try {

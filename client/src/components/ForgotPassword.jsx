@@ -2,6 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import API_URL from '../config';
+import { FaEnvelope } from 'react-icons/fa';
 
 function ForgotPassword() {
     const [email, setEmail] = useState('');
@@ -34,13 +35,17 @@ function ForgotPassword() {
                         <form onSubmit={handleSubmit}>
                             <div className="mb-3">
                                 <label className="form-label">Email address</label>
-                                <input
-                                    type="email"
-                                    className="form-control"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
+                                <div className="input-group">
+                                    <span className="input-group-text"><FaEnvelope /></span>
+                                    <input
+                                        type="email"
+                                        className="form-control"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                        placeholder="Enter your email"
+                                    />
+                                </div>
                             </div>
                             <button type="submit" className="btn btn-primary w-100" disabled={loading}>
                                 {loading ? 'Sending...' : 'Send Reset Link'}
