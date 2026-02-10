@@ -215,7 +215,8 @@ app.post('/api/auth/forgot-password', async (req, res) => {
                     },
                     tls: {
                         rejectUnauthorized: false // Helps with some self-signed cert issues on cloud
-                    }
+                    },
+                    family: 4 // FORCE IPv4 to avoid ENETUNREACH errors
                 });
 
                 // Verify connection first
