@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
-const { Resend } = require('resend');
+// const { Resend } = require('resend'); // Removed Resend
 const User = require('./models/User');
 
 // Load environment variables from .env file in development, or from Render's environment in production
@@ -173,86 +173,40 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         const resetLink = `${clientUrl}/reset-password/${token}`;
         console.log(`[ForgotPassword] Token generated. Link: ${resetLink}`);
 
-        let emailSent = false;
-        let lastError = null;
-
-        // 1. Try using Resend if API Key is provided
-        if (process.env.RESEND_API_KEY) {
-            console.log('[ForgotPassword] Attempting to send via Resend...');
-            try {
-                const resend = new Resend(process.env.RESEND_API_KEY);
-                const { data, error } = await resend.emails.send({
-                    from: 'onboarding@resend.dev',
-                    to: email, // Free tier limitation: Must be verified email
-                    subject: 'Password Reset',
-                    html: `<p>You requested a password reset. Click the link to reset your password:</p><a href="${resetLink}">${resetLink}</a>`
-                });
-
-                if (error) {
-                    console.error('[ForgotPassword] Resend API Error:', error);
-                    lastError = error;
-                } else {
-                    console.log('[ForgotPassword] Email sent via Resend:', data);
-                    emailSent = true;
+        // Use Nodemailer with Gmail (Port 465 - Secure)
+        console.log('[ForgotPassword] Attempting to send via Nodemailer (Gmail 465)...');
+        try {
+            const transporter = nodemailer.createTransport({
+                host: 'smtp.gmail.com',
+                port: 465,
+                secure: true, // true for 465, false for other ports
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASS
                 }
-            } catch (resendError) {
-                console.error('[ForgotPassword] Resend execution error:', resendError);
-                lastError = resendError;
-            }
-        }
+            });
 
-        // 2. Use Nodemailer ONLY if Resend failed or not present
-        if (!emailSent) {
-            console.log('[ForgotPassword] Attempting to send via Nodemailer to:', email);
-            try {
-                const transporter = nodemailer.createTransport({
-                    host: 'smtp.gmail.com',
-                    port: 587,
-                    secure: false, // true for 465, false for other ports
-                    auth: {
-                        user: process.env.EMAIL_USER,
-                        pass: process.env.EMAIL_PASS
-                    },
-                    tls: {
-                        rejectUnauthorized: false // Helps with some self-signed cert issues on cloud
-                    },
-                    family: 4 // FORCE IPv4 to avoid ENETUNREACH errors
-                });
+            // Verify connection first
+            await transporter.verify();
+            console.log('[ForgotPassword] Nodemailer connection verified.');
 
-                // Verify connection first
-                console.log('[ForgotPassword] Verifying Nodemailer transporter...');
-                await transporter.verify();
-                console.log('[ForgotPassword] Nodemailer connection verified.');
+            const mailOptions = {
+                from: process.env.EMAIL_USER, // SENDER ADDRESS
+                to: email,
+                subject: 'Password Reset',
+                text: `You requested a password reset. Click the link to reset your password: ${resetLink}`,
+                html: `<p>You requested a password reset. Click the link to reset your password:</p><a href="${resetLink}">${resetLink}</a>`
+            };
 
-                const mailOptions = {
-                    from: process.env.EMAIL_USER, // SENDER ADDRESS
-                    to: email,
-                    subject: 'Password Reset',
-                    text: `You requested a password reset. Click the link to reset your password: ${resetLink}`,
-                    html: `<p>You requested a password reset. Click the link to reset your password:</p><a href="${resetLink}">${resetLink}</a>`
-                };
-
-                console.log('[ForgotPassword] Sending mail...');
-                const info = await transporter.sendMail(mailOptions);
-                console.log('[ForgotPassword] Email sent via Nodemailer. MessageId:', info.messageId);
-                console.log('[ForgotPassword] Preview URL:', nodemailer.getTestMessageUrl(info));
-                emailSent = true;
-
-            } catch (nodemailerError) {
-                console.error('[ForgotPassword] Nodemailer error details:', nodemailerError);
-                lastError = nodemailerError;
-            }
-        }
-
-        if (emailSent) {
-            console.log('[ForgotPassword] Success!');
+            const info = await transporter.sendMail(mailOptions);
+            console.log('[ForgotPassword] Email sent successfully. MessageId:', info.messageId);
             return res.status(200).json({ message: 'Reset link sent to email' });
-        } else {
-            console.error('[ForgotPassword] FAILED. Last error:', lastError);
+
+        } catch (error) {
+            console.error('[ForgotPassword] Email Sending Failed:', error);
             return res.status(500).json({
                 message: 'Failed to send email. Please try again later.',
-                debug: lastError ? lastError.message : 'Unknown error',
-                details: lastError ? JSON.stringify(lastError, Object.getOwnPropertyNames(lastError)) : 'No details'
+                debug: error.message
             });
         }
 
