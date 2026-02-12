@@ -169,7 +169,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         user.resetTokenExpiry = Date.now() + 3600000; // 1 hour
         await user.save();
 
-        const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+        const clientUrl = process.env.CLIENT_URL || 'https://heroic-daffodil-8b2525.netlify.app';
         const resetLink = `${clientUrl}/reset-password/${token}`;
         console.log(`[ForgotPassword] Token generated. Link: ${resetLink}`);
 
