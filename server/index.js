@@ -175,6 +175,12 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
         // Use Nodemailer with Gmail (Port 465 - Secure)
         console.log('[ForgotPassword] Attempting to send via Nodemailer (Gmail 465)...');
+
+        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+            console.error('[ForgotPassword] Missing EMAIL_USER or EMAIL_PASS in environment variables.');
+            return res.status(500).json({ message: 'Server email configuration error.' });
+        }
+
         try {
             const transporter = nodemailer.createTransport({
                 host: 'smtp.gmail.com',
@@ -183,7 +189,8 @@ app.post('/api/auth/forgot-password', async (req, res) => {
                 auth: {
                     user: process.env.EMAIL_USER,
                     pass: process.env.EMAIL_PASS
-                }
+                },
+                family: 4 // FORCE IPv4 to avoid ENETUNREACH errors on some cloud providers (like Render)
             });
 
             // Verify connection first
